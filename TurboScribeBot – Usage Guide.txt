@@ -1,0 +1,232 @@
+📘 TurboScribeBot – Usage Guide
+
+This guide explains how to run **TurboScribeBot** inside Docker, configure it, and get results.
+
+---
+
+ 1️⃣ Run the Container
+
+Basic run command:
+
+```bash
+docker run \
+  --env-file /hamada/TurboScribeBot/.env \
+  -v /hamada/TurboScribeBot/outputs:/app/outputs \
+ -v /hamada/TurboScribeBot/last_deleted.txt:/app/last_deleted.txt \
+  turboscribe-bot-2 \
+  [ARGS...]
+```
+
+`--env-file /hamada/TurboScribeBot/.env` → (path to the .env file) provides credentials (EMAIL, PASSWORD).
+`-v /hamada/TurboScribeBot/outputs:/app/outputs` → mounts output folder to your current directory.
+`[ARGS...]` → script arguments (see below).
+
+---
+
+ 2️⃣ Environment File (`.env`)
+
+Create a `.env` file with your login info:
+
+```env
+EMAIL=your_email@example.com
+PASSWORD=your_password
+DAY=10
+HOST_OUTPUTS_BASE=/hamada/TurboScribeBot/outputs
+```
+
+This avoids passing secrets on the command line.
+
+---
+
+ 3️⃣ Arguments
+
+Required
+
+ `--id ID` → numeric or unique ID for this process (used as output folder name).
+ One of:
+  `--link URL` → YouTube/video/audio link.
+  `--file PATH` → Local file path (must be mounted into the container).
+
+Sources
+
+  Choose one workflow:
+
+    Zoom / OneDrive workflow
+      --source [zoom|onedrive] → select the source.
+      --passcode CODE → Zoom recording passcode (if required).
+      --with-transcription → automatically transcribe after download (requires --language).
+
+  Direct transcription workflow
+    --link URL → YouTube/video/audio link.
+    --file PATH → Local file path (must be mounted into the container).
+
+
+Options
+
+`--language LANG` → language for transcription. (e.g., `en`, `ar`)
+`--model [base|small|large-v2]` → model size (default: `base`).
+
+Features (flags)
+
+`--speakers [N]` → diarization (optional: number of speakers, default auto).
+`--transcribe` → transcribe the original audio language directly to English..
+`--restore` → enhance/restore audio quality.
+`--timestamps → add timestamps to result.
+`--short_summary` → generate short GPT summary.
+`--detail_summary` → generate detailed GPT summary.
+`--translate LANG` → translate transcript (e.g., `en`, `ar`).
+`--download_audio` → download original audio file.
+
+---
+
+ 4️⃣ Outputs
+
+All results are stored in:
+
+```
+outputs/{id}/
+```
+
+Example structure:
+
+```
+outputs/51/
+  ├── report_51.json
+  ├── 51.log
+  ├── transcript.txt
+  ├── summary_detailed.txt
+  ├── translate.txt
+  ├── file.mp3
+```
+
+---
+
+ 5️⃣ Examples
+
+🔹 Transcribe a YouTube link
+
+```bash
+docker run -d --rm \
+  --env-file /hamada/TurboScribeBot/.env \
+  -v /hamada/TurboScribeBot/outputs:/hamada/TurboScribeBot/outputs \
+  -v /hamada/TurboScribeBot/last_deleted.txt:/app/last_deleted.txt \
+  turboscribe-bot-2 \
+  --id 600 \
+  --link 'https://youtu.be/weaGPNlSMBE?si=im23gF5TOEG1U6ag' \
+  --language ar
+```
+
+🔹 Transcribe a local file
+
+```bash
+docker run \
+  --env-file /hamada/TurboScribeBot/.env \
+  -v /hamada/TurboScribeBot/outputs:/hamada/TurboScribeBot/outputs \
+  -v /hamada/TurboScribeBot/last_deleted.txt:/app/last_deleted.txt \
+  -v /path/to/audio:/app/audio \
+  turboscribe-bot-2 \
+  --id 52 \
+  --file /app/audio/interview.mp3 \
+  --language ar
+```
+
+🔹 Transcribe + Speaker Diarization
+
+```bash
+docker run -d --rm \
+  --env-file /hamada/TurboScribeBot/.env \
+  -v /hamada/TurboScribeBot/outputs:/hamada/TurboScribeBot/outputs \
+  -v /hamada/TurboScribeBot/last_deleted.txt:/app/last_deleted.txt \
+  turboscribe-bot-2 \
+  --id 53 \
+  --link 'https://youtu.be/weaGPNlSMBE?si=im23gF5TOEG1U6ag' \
+  --language ar \
+  --speakers
+```
+
+🔹 Transcribe + Summaries
+
+```bash
+docker run -d --rm \
+  --env-file /hamada/TurboScribeBot/.env \
+  -v /hamada/TurboScribeBot/outputs:/hamada/TurboScribeBot/outputs \
+  -v /hamada/TurboScribeBot/last_deleted.txt:/app/last_deleted.txt \
+  turboscribe-bot-2 \
+  --id 101 \
+  --link 'https://youtu.be/weaGPNlSMBE?si=im23gF5TOEG1U6ag' \
+  --language ar \
+  --short_summary \
+  --detail_summary
+```
+
+🔹 Transcribe + Translation
+
+```bash
+docker run -d --rm \
+  --env-file /hamada/TurboScribeBot/.env \
+  -v /hamada/TurboScribeBot/outputs:/hamada/TurboScribeBot/outputs \
+  -v /hamada/TurboScribeBot/last_deleted.txt:/app/last_deleted.txt \
+  turboscribe-bot-2 \
+  --id 102 \
+  --link 'https://youtu.be/weaGPNlSMBE?si=im23gF5TOEG1U6ag' \
+  --language ar \
+  --translate en
+```
+
+🔹 Full Pipeline (Transcribe + Summaries + Translation)
+
+```bash
+docker run -d --rm \
+  --env-file /hamada/TurboScribeBot/.env \
+  -v /hamada/TurboScribeBot/outputs:/hamada/TurboScribeBot/outputs \
+  -v /hamada/TurboScribeBot/last_deleted.txt:/app/last_deleted.txt \
+  turboscribe-bot-2 \
+  --id 54 \
+  --link 'https://youtu.be/weaGPNlSMBE?si=im23gF5TOEG1U6ag' \
+  --language ar \
+  --short_summary \
+  --detail_summary \
+  --timestamps \
+  --translate en
+```
+
+🔹 Download Zoom recording only
+
+docker run -d --rm \
+  --env-file /hamada/TurboScribeBot/.env \
+  -v /hamada/TurboScribeBot/outputs:/hamada/TurboScribeBot/outputs \
+  -v /hamada/TurboScribeBot/last_deleted.txt:/app/last_deleted.txt \
+  turbo-3 \
+  --id 954 \
+  --source zoom \
+  --link 'https://us06web.zoom.us/rec/share/tjs8JiUXVKUhV8pmJ3IIu__ZPcom5Z65xdYQeocw9W30TK7LxXTATEdGfdFfW4D8.vNBkPPUrtnjcWSCp?startTime=1756738281000' \
+  --passcode 'S$hB4cz#'
+
+🔹 Download Zoom + Transcription
+
+docker run -d --rm \
+  --env-file /hamada/TurboScribeBot/.env \
+  -v /hamada/TurboScribeBot/outputs:/hamada/TurboScribeBot/outputs \
+  -v /hamada/TurboScribeBot/last_deleted.txt:/app/last_deleted.txt \
+  turboscribe-bot-2 \
+  --id 201 \
+  --source zoom \
+  --link 'https://us06web.zoom.us/rec/share/tjs8JiUXVKUhV8pmJ3IIu__ZPcom5Z65xdYQeocw9W30TK7LxXTATEdGfdFfW4D8.vNBkPPUrtnjcWSCp?startTime=1756738281000' \
+  --passcode 'S$hB4cz#' \
+  --with-transcription \
+  --language ar \
+  --detail_summary
+
+🔹 Download from OneDrive + Translate
+
+docker run -d --rm \
+  --env-file /hamada/TurboScribeBot/.env \
+  -v /hamada/TurboScribeBot/outputs:/hamada/TurboScribeBot/outputs \
+  -v /hamada/TurboScribeBot/last_deleted.txt:/app/last_deleted.txt \
+  turboscribe-bot-2 \
+  --id 701 \
+  --source onedrive \
+  --link 'https://1drv.ms/v/c/ffa6c3f9d03c6a8d/EQJYEAwHsaZHoWxlzP2UiRsB8nW2xtNGJq_beB7lhu2KIA?e=dTcyge' \
+  --with-transcription \
+  --language ar \
+  --translate en
